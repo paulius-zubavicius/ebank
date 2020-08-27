@@ -1,0 +1,22 @@
+
+server.port: 8080
+
+spring:
+  profiles:
+    active:
+    - dev
+  datasource:
+    hikari:
+      driver-class-name: org.postgresql.Driver
+      jdbc-url: jdbc:postgresql:ebank
+      username: postgres
+      password: webshop
+  jpa: 
+    properties:
+       hibernate.hbm2ddl.auto : validate
+       hibernate.globally_quoted_identifiers : true
+
+       
+       
+ebank.statement.page-size: 5
+ebank.session.max-sess-in-min: 30

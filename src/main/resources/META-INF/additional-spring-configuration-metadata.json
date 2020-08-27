@@ -1,0 +1,14 @@
+{
+	"properties": [
+		{
+			"name": "ebank.statement.page-size",
+			"type": "java.lang.String",
+			"description": "Default page size of statment"
+		},
+		{
+			"name": "ebank.session.max-sess-in-min",
+			"type": "java.lang.String",
+			"description": "Maximum session time out in minutes"
+		}
+	]
+}
