@@ -53,25 +53,25 @@ public class MoneyOperationServiceImpl implements MoneyOperationService {
 
 	@Override
 	public Balance deposit(String token, BigDecimal amount) {
-		Client client = toutchValidSession(token).getClient();
+		Client client = touchValidSession(token).getClient();
 		return moneyOperation(DEPOSIT, client, amount);
 	}
 
 	@Override
 	public Balance withdraw(String token, BigDecimal amount) {
-		Client client = toutchValidSession(token).getClient();
+		Client client = touchValidSession(token).getClient();
 		return moneyOperation(WITHDRAW, client, amount);
 	}
 
 	@Override
 	public Balance balance(String token) {
-		return new Balance(toutchValidSession(token).getClient().getBalance());
+		return new Balance(touchValidSession(token).getClient().getBalance());
 	}
 
 	@Override
 	public StatementPage statement(String token, Integer pageNb, Integer statementPageSize) {
 
-		Client client = toutchValidSession(token).getClient();
+		Client client = touchValidSession(token).getClient();
 
 		Pageable pageable = PageRequest.of(pageNb, statementPageSize);
 		Page<Operation> page = operationDao.findAllByClient(client, pageable);
@@ -96,7 +96,7 @@ public class MoneyOperationServiceImpl implements MoneyOperationService {
 		return oe;
 	}
 
-	private Session toutchValidSession(String token) {
+	private Session touchValidSession(String token) {
 
 		Optional<Session> esssOpt = sessionDao.findByValidToken(token, maxSessInMin);
 		if (esssOpt.isEmpty()) {
@@ -107,7 +107,7 @@ public class MoneyOperationServiceImpl implements MoneyOperationService {
 		sess.setLastTouch(LocalDateTime.now());
 
 		sessionDao.save(sess);
-
+		
 		return sess;
 	}
 
@@ -131,8 +131,8 @@ public class MoneyOperationServiceImpl implements MoneyOperationService {
 				throw new EBankException(HttpStatus.NOT_ACCEPTABLE, msgService.getMessage(ERR_MSG_NOT_ENOUGH_MONEY));
 			}
 		}
-
-		return clientDao.save(client);
+		clientDao.save(client);
+		return client;
 	}
 
 	private void createOperationRecord(OperationType type, BigDecimal amount, Client client) {
