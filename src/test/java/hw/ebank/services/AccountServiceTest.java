@@ -1,22 +1,20 @@
 package hw.ebank.services;
 
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.util.Optional;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.util.DigestUtils;
 
 import hw.ebank.dao.ClientDAO;
@@ -26,16 +24,8 @@ import hw.ebank.model.api.request.Credentials;
 import hw.ebank.model.api.response.Token;
 import hw.ebank.model.entites.Client;
 
-@RunWith(SpringRunner.class)
+@SpringBootTest
 public class AccountServiceTest {
-
-	@TestConfiguration
-	static class TestContextConfiguration {
-		@Bean
-		public AccountService accountService() {
-			return new AccountServiceImpl();
-		}
-	}
 
 	@MockBean
 	private ClientDAO clientDao;
@@ -49,7 +39,7 @@ public class AccountServiceTest {
 	@Autowired
 	private AccountService accountService;
 
-	@Before
+	@BeforeEach
 	public void init() {
 		Client client1 = new Client();
 		client1.setId(1L);
@@ -73,29 +63,39 @@ public class AccountServiceTest {
 		when(clientDao.findByEmail(Mockito.anyString())).thenReturn(Optional.empty());
 	}
 
-	@Test(expected = EBankException.class)
+	@Test
 	public void noCredentials1() {
-		accountService.login(null);
+		assertThrows(EBankException.class, () -> {
+			accountService.login(null);
+		});
 	}
 
-	@Test(expected = EBankException.class)
+	@Test
 	public void noCredentials2() {
-		accountService.login(new Credentials());
+		assertThrows(EBankException.class, () -> {
+			accountService.login(new Credentials());
+		});
 	}
 
-	@Test(expected = EBankException.class)
+	@Test
 	public void noEmail() {
-		accountService.login(new Credentials(null, "password"));
+		assertThrows(EBankException.class, () -> {
+			accountService.login(new Credentials(null, "password"));
+		});
 	}
 
-	@Test(expected = EBankException.class)
+	@Test
 	public void noPassw() {
-		accountService.login(new Credentials("email", null));
+		assertThrows(EBankException.class, () -> {
+			accountService.login(new Credentials("email", null));
+		});
 	}
 
-	@Test(expected = EBankException.class)
+	@Test
 	public void wrongCredentials() {
-		accountService.login(new Credentials("not@existing.email", "password"));
+		assertThrows(EBankException.class, () -> {
+			accountService.login(new Credentials("not@existing.email", "password"));
+		});
 	}
 
 	@Test
@@ -108,6 +108,7 @@ public class AccountServiceTest {
 
 		when(clientDao.findByCredentials("111@111.111", DigestUtils.md5DigestAsHex("111".getBytes())))
 				.thenReturn(Optional.of(client1));
+
 		Token token = accountService.login(new Credentials("111@111.111", "111"));
 		assertNotNull(token);
 		assertNotNull(token.getToken());
@@ -151,7 +152,7 @@ public class AccountServiceTest {
 		assertEquals(36, token.getToken().length());
 	}
 
-	@Test(expected = EBankException.class)
+	@Test
 	public void signupAsExisting() {
 		Client client1 = new Client();
 		client1.setId(1L);
@@ -171,7 +172,9 @@ public class AccountServiceTest {
 
 		when(clientDao.findByEmail("444@444.444")).thenReturn(Optional.of(client1));
 
-		accountService.signupNew(new Credentials("444@444.444", "444"));
+		assertThrows(EBankException.class, () -> {
+			accountService.signupNew(new Credentials("444@444.444", "444"));
+		});
 	}
 
 }

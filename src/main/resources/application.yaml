@@ -10,7 +10,7 @@ spring:
       driver-class-name: org.postgresql.Driver
       jdbc-url: jdbc:postgresql:ebank
       username: postgres
-      password: webshop
+      password: postgres
   jpa: 
     properties:
        hibernate.hbm2ddl.auto : validate

@@ -1,0 +1,22 @@
+
+
+CREATE TABLE client
+(
+    "id" bigint NOT NULL,
+    "version" integer NOT NULL,
+    "email" VARCHAR  NOT NULL,
+    "password_hash" CHAR(100) NOT NULL,
+    "balance" DECIMAL(10,2) NOT NULL
+
+);
+
+CREATE TABLE operation
+(
+    "id" bigint NOT NULL,
+    "client_id" bigint NOT NULL,
+    "type" CHAR(20) NOT NULL,
+    "amount" DECIMAL(10,2) NOT NULL,
+    "timestamp" timestamp with time zone NOT NULL,
+    "balance_before" DECIMAL(10,2) NOT NULL
+
+);

@@ -1,8 +1,9 @@
 package hw.ebank.services;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
@@ -10,19 +11,16 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import hw.ebank.dao.ClientDAO;
 import hw.ebank.dao.OperationDAO;
@@ -34,40 +32,12 @@ import hw.ebank.model.entites.Client;
 import hw.ebank.model.entites.Operation;
 import hw.ebank.model.entites.Session;
 
-@RunWith(SpringRunner.class)
+@SpringBootTest
 public class MoneyOperationServiceTest {
 
 	private static final String VALID_TOKEN_1 = "valid-random-token-111";
 	private static final String VALID_TOKEN_2 = "valid-random-token-222";
 	private static final String NOT_VALID_TOKEN = "not-valid-random-token";
-
-	private static List<Operation> operations = new ArrayList<>();
-
-	@TestConfiguration
-	static class TestContextConfiguration {
-
-		@Bean
-		public OperationDAO operationDAO() {
-			return new OperationDAO() {
-
-				@Override
-				public Page<Operation> findAllByClient(Client client, Pageable pageable) {
-					return new PageImpl<>(operations, pageable, operations.size());
-				}
-
-				@Override
-				public Operation save(Operation op) {
-					operations.add(op);
-					return op;
-				}
-			};
-		}
-
-		@Bean
-		public MoneyOperationService moneyOpService() {
-			return new MoneyOperationServiceImpl();
-		}
-	}
 
 	@MockBean
 	private ClientDAO clientDao;
@@ -76,14 +46,16 @@ public class MoneyOperationServiceTest {
 	private SessionDAO sessionDao;
 
 	@MockBean
+	private OperationDAO operationDao;
+
+	@MockBean
 	private MsgResourceService messageSource;
 
 	@Autowired
 	private MoneyOperationService moneyOpService;
 
-	@Before
+	@BeforeEach
 	public void init() {
-		operations.clear();
 
 		Client client1 = new Client();
 		client1.setId(1L);
@@ -102,31 +74,56 @@ public class MoneyOperationServiceTest {
 		when(clientDao.findByEmail("111@111.111")).thenReturn(Optional.of(client1));
 		when(clientDao.findByEmail("222@222.222")).thenReturn(Optional.of(client2));
 
-		when(sessionDao.findByValidToken(VALID_TOKEN_1, 1))
+		when(sessionDao.findByValidToken(Mockito.eq(VALID_TOKEN_1), Mockito.any()))
 				.thenReturn(Optional.of(new Session(1L, LocalDateTime.now(), VALID_TOKEN_1, client1)));
-		when(sessionDao.findByValidToken(VALID_TOKEN_2, 1))
+		when(sessionDao.findByValidToken(Mockito.eq(VALID_TOKEN_2), Mockito.any()))
 				.thenReturn(Optional.of(new Session(2L, LocalDateTime.now(), VALID_TOKEN_2, client2)));
+		when(sessionDao.findByValidToken(Mockito.eq(NOT_VALID_TOKEN), Mockito.any())).thenReturn(Optional.empty());
+
+		List<Operation> operations = new ArrayList<>();
+
+		when(operationDao.save(Mockito.any())).thenAnswer((invocation) -> {
+			operations.add((Operation) invocation.getArguments()[0]);
+			return (Operation) invocation.getArguments()[0];
+		});
+
+		when(operationDao.findAllByClient(Mockito.any(), Mockito.any())).thenAnswer((invocation) -> {
+			Client client = (Client) invocation.getArguments()[0];
+			Pageable pageable = (Pageable) invocation.getArguments()[1];
+			List<Operation> ops = operations.stream()
+					.filter(op -> op.getClient().getEmail().equalsIgnoreCase(client.getEmail()))
+					.collect(Collectors.toList());
+			return new PageImpl<>(ops, pageable, ops.size());
+		});
 
 	}
 
-	@Test(expected = EBankException.class)
+	@Test
 	public void balanceNotValidToken() {
-		moneyOpService.balance(NOT_VALID_TOKEN);
+		assertThrows(EBankException.class, () -> {
+			moneyOpService.balance(NOT_VALID_TOKEN);
+		});
 	}
 
-	@Test(expected = EBankException.class)
+	@Test
 	public void depositNotValidToken() {
-		moneyOpService.deposit(NOT_VALID_TOKEN, new BigDecimal(1));
+		assertThrows(EBankException.class, () -> {
+			moneyOpService.deposit(NOT_VALID_TOKEN, new BigDecimal(1));
+		});
 	}
 
-	@Test(expected = EBankException.class)
+	@Test
 	public void withdrawNotValidToken() {
-		moneyOpService.withdraw(NOT_VALID_TOKEN, new BigDecimal(1));
+		assertThrows(EBankException.class, () -> {
+			moneyOpService.withdraw(NOT_VALID_TOKEN, new BigDecimal(1));
+		});
 	}
 
-	@Test(expected = EBankException.class)
+	@Test
 	public void statementNotValidToken() {
-		moneyOpService.statement(NOT_VALID_TOKEN, 0, 1);
+		assertThrows(EBankException.class, () -> {
+			moneyOpService.statement(NOT_VALID_TOKEN, 0, 1);
+		});
 	}
 
 	@Test
@@ -165,9 +162,11 @@ public class MoneyOperationServiceTest {
 		assertTrue(new BigDecimal(0).compareTo(balance2.getBalance()) == 0);
 	}
 
-	@Test(expected = EBankException.class)
+	@Test
 	public void withdrawNotEnoughMoney() {
-		moneyOpService.withdraw(VALID_TOKEN_1, new BigDecimal(11.01));
+		assertThrows(EBankException.class, () -> {
+			moneyOpService.withdraw(VALID_TOKEN_1, new BigDecimal(11.01));
+		});
 	}
 
 	@Test
